@@ -42,8 +42,13 @@ import java.util.Observable;
  * A MARS tool for obtaining instruction statistics by instruction category.
  * <p>
  * The code of this tools is initially based on the Instruction counter tool by Felipe Lassa.
+ * <p>
+ * <a href="https://www.cs.kzoo.edu/cs230/Resources/MIPS/MachineXL/mipsOpFunctCodes.html">Simple Reference</a>
+ * <p>
+ * <a href="https://mathcs.holycross.edu/~csci226/MIPS/SPIM.pdf">Complete Reference</a>
  *
  * @author Ingo Kofler <ingo.kofler@itec.uni-klu.ac.at>
+ * @author Tony S. <tony-turmoil@outlook.com>
  */
 // @SuppressWarnings("serial")
 public class InstructionStatistics extends AbstractMarsToolAndApplication {
@@ -53,15 +58,15 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      */
     private static final int MAX_CATEGORY = 5;
     /**
-     * constant for ALU instructions category
+     * constant for div instructions category
      */
-    private static final int CATEGORY_ALU = 0;
+    private static final int CATEGORY_DIV = 0;
+    /**
+     * constant for mul instructions category
+     */
+    private static final int CATEGORY_MUL = 1;
     /**
      * constant for jump instructions category
-     */
-    private static final int CATEGORY_JUMP = 1;
-    /**
-     * constant for branch instructions category
      */
     private static final int CATEGORY_BRANCH = 2;
     /**
@@ -75,15 +80,24 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
     /**
      * name of the tool
      */
-    private static String NAME = "Instruction Statistics";
+    private static final String NAME = "Instruction Statistics";
     /**
      * version and author information of the tool
      */
-    private static String VERSION = "Version 1.0 (Ingo Kofler)";
+    private static final String VERSION = "Version 1.1 (Ingo Kofler, Tony S.)";
     /**
      * heading of the tool
      */
-    private static String HEADING = "";
+    private static final String HEADING = "";
+    /**
+     * array of counter variables - one for each instruction category
+     */
+    private final int[] m_counters = new int[MAX_CATEGORY];
+    /**
+     * names of the instruction categories as array
+     */
+    private final String[] m_categoryLabels = { "Division", "Multiply", "Jump/Branch", "Memory", "Others" };
+    private final double[] m_instWeights = new double[]{ 50.0, 4.0, 1.2, 2.0, 1.0 };
     /**
      * The last address we saw. We ignore it because the only way for a
      * program to execute twice the same instruction is to enter an infinite
@@ -95,9 +109,17 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      */
     private JTextField m_tfTotalCounter;
     /**
+     * text field for visualizing the final cycle of the simulation
+     */
+    private JTextField m_tfStatistics;
+    /**
      * array of text field - one for each instruction category
      */
     private JTextField m_tfCounters[];
+
+
+    // From Felipe Lessa's instruction counter.  Prevent double-counting of instructions 
+    // which happens because 2 read events are generated.   
     /**
      * array of progress pars - one for each instruction category
      */
@@ -106,18 +128,6 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      * counter for the total number of instructions processed
      */
     private int m_totalCounter = 0;
-    /**
-     * array of counter variables - one for each instruction category
-     */
-    private int m_counters[] = new int[MAX_CATEGORY];
-
-
-    // From Felipe Lessa's instruction counter.  Prevent double-counting of instructions 
-    // which happens because 2 read events are generated.   
-    /**
-     * names of the instruction categories as array
-     */
-    private String m_categoryLabels[] = { "ALU", "Jump", "Branch", "Memory", "Other" };
 
     /**
      * Simple constructor, likely used to run a stand-alone enhanced instruction counter.
@@ -187,15 +197,28 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
         c.insets = new Insets(3, 3, 3, 3);
 
         // create label, text field and progress bar for each category
+        double totalWeight = 0.0;
+        for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
+            totalWeight += m_instWeights[i];
+        }
         for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
             c.gridy++;
             c.gridx = 2;
-            panel.add(new JLabel(m_categoryLabels[i] + ":   "), c);
+            panel.add(new JLabel(m_categoryLabels[i] + " (" + String.format("%1$,.1f", m_instWeights[i] / totalWeight * 100) + "%):    "), c);
             c.gridx = 3;
             panel.add(m_tfCounters[i], c);
             c.gridx = 4;
             panel.add(m_pbCounters[i], c);
         }
+
+        c.gridy++;
+        c.gridx = 2;
+        panel.add(new JLabel("Final Cycle: "), c);
+        c.gridx = 3;
+        c.gridwidth = 2;
+        m_tfStatistics = new JTextField("0", 10);
+        m_tfStatistics.setEditable(false);
+        panel.add(m_tfStatistics, c);
 
         return panel;
     }
@@ -289,6 +312,13 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
             m_pbCounters[i].setMaximum(m_totalCounter);
             m_pbCounters[i].setValue(m_counters[i]);
         }
+
+        double finalCycle = 0.0;
+        for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
+            finalCycle += m_counters[i] * m_instWeights[i];
+        }
+
+        m_tfStatistics.setText(String.format("%1$,.1f", finalCycle));
     }
 
     /**
@@ -299,8 +329,8 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      *
      * @param stmt the instruction to decode
      * @return the category of the instruction
-     * @see InstructionStatistics#CATEGORY_ALU
-     * @see InstructionStatistics#CATEGORY_JUMP
+     * @see InstructionStatistics#CATEGORY_DIV
+     * @see InstructionStatistics#CATEGORY_MUL
      * @see InstructionStatistics#CATEGORY_BRANCH
      * @see InstructionStatistics#CATEGORY_MEM
      * @see InstructionStatistics#CATEGORY_OTHER
@@ -312,16 +342,22 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
 
         if (opCode == 0x00) {
             if (funct == 0x00) {
-                return InstructionStatistics.CATEGORY_ALU; // sll
+                return InstructionStatistics.CATEGORY_OTHER; // sll
             }
             if (0x02 <= funct && funct <= 0x07) {
-                return InstructionStatistics.CATEGORY_ALU; // srl, sra, sllv, srlv, srav
+                return InstructionStatistics.CATEGORY_OTHER; // srl, sra, sllv, srlv, srav
             }
             if (funct == 0x08 || funct == 0x09) {
-                return InstructionStatistics.CATEGORY_JUMP; // jr, jalr
+                return InstructionStatistics.CATEGORY_BRANCH; // jr, jalr
             }
-            if (0x10 <= funct && funct <= 0x2F) {
-                return InstructionStatistics.CATEGORY_ALU; // mfhi, mthi, mflo, mtlo, mult, multu, div, divu, add, addu, sub, subu, and, or, xor, nor, slt, sltu
+            if (funct == 0x0C || funct == 0x0D) {
+                return InstructionStatistics.CATEGORY_OTHER; // syscall, break
+            }
+            if (funct == 0x1A || funct == 0x1B) {
+                return InstructionStatistics.CATEGORY_DIV; // div, divu
+            }
+            if (funct == 0x18 || funct == 0x19) {
+                return InstructionStatistics.CATEGORY_MUL; // mult, multu
             }
             return InstructionStatistics.CATEGORY_OTHER;
         }
@@ -335,13 +371,13 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
             return InstructionStatistics.CATEGORY_OTHER;
         }
         if (opCode == 0x02 || opCode == 0x03) {
-            return InstructionStatistics.CATEGORY_JUMP; // j, jal
+            return InstructionStatistics.CATEGORY_BRANCH; // j, jal
         }
         if (0x04 <= opCode && opCode <= 0x07) {
             return InstructionStatistics.CATEGORY_BRANCH; // beq, bne, blez, bgtz
         }
         if (0x08 <= opCode && opCode <= 0x0F) {
-            return InstructionStatistics.CATEGORY_ALU; // addi, addiu, slti, sltiu, andi, ori, xori, lui
+            return InstructionStatistics.CATEGORY_OTHER; // addi, addiu, slti, sltiu, andi, ori, xori, lui
         }
         if (0x14 <= opCode && opCode <= 0x17) {
             return InstructionStatistics.CATEGORY_BRANCH; // beql, bnel, blezl, bgtzl
@@ -351,6 +387,9 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
         }
         if (0x28 <= opCode && opCode <= 0x2E) {
             return InstructionStatistics.CATEGORY_MEM; // sb, sh, swl, sw, swr
+        }
+        if (opCode == 0x30 || opCode == 0x38) {
+            return InstructionStatistics.CATEGORY_MEM; // lwc1, swc1
         }
 
         return InstructionStatistics.CATEGORY_OTHER;
