@@ -1,5 +1,9 @@
 @echo off
 
+echo Entering class directory...
 cd out\production\Mars
+echo Building Mars...
 call CreateMarsJar.bat
+echo Copying Mars.jar out...
 move Mars.jar ..\..\Mars.jar
+echo Build complete
