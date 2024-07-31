@@ -216,7 +216,17 @@ public class SystemIO {
         int returnValue = 0;
         if (Globals.getGui() == null) {
             try {
-                input = getInputReader().readLine();
+                // 2024/07/31 TS:
+                // When reading a character in console mode, readLine will cause
+                // a different behavior than in GUI mode. In fact, we just need to
+                // read a single character, including whitespaces.
+                // was: input = getInputReader().readLine();
+                int ch = getInputReader().read();
+                if (ch == -1) {
+                    input = ""; // will throw exception below
+                } else {
+                    input = String.valueOf((char) ch);
+                }
             } catch (IOException e) {
             }
         } else {
