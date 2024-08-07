@@ -39,6 +39,12 @@ Below is the explanation for the command-line arguments, you can refer to the of
 | `sen` (`se2`) | terminate MARS with exit code `n` if simulate (run) error occurs   |
 | `<file>`      | the MIPS assembly file to run                                      |
 
+## Modifications
+
+To change the instruction statistics feature, you can modify the `mars.tools.InstructionStatistisc` class by changing the `m_instWeights` field.
+
+In GUI mode, it won't output `InstructionStatistics.txt`. In CLI mode, this feature is injected into `mars.MarsLaunch`.
+
 ## Troubleshooting
 
 If you are not able to run the `Mars.jar` with double-click, check the following:
