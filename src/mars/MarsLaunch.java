@@ -1,6 +1,5 @@
 package mars;
 
-import mars.tools.InstructionStatistics;
 import mars.venus.*;
 import mars.util.*;
 import mars.mips.dump.*;
@@ -156,7 +155,7 @@ public class MarsLaunch {
             maxSteps = -1;
             out = System.out;
 
-            InstructionStatistics instructionStatistics = new InstructionStatistics(true);
+            InstructionStatisticsDump dump = new InstructionStatisticsDump();
             if (parseCommandArgs(args)) {
                 if (runCommand()) {
                     displayMiscellaneousPostMortem();
@@ -165,7 +164,7 @@ public class MarsLaunch {
                 }
                 dumpSegments();
             }
-            instructionStatistics.dump();
+            dump.dump();
 
             System.exit(Globals.exitCode);
         }
