@@ -35,6 +35,8 @@ import mars.mips.hardware.MemoryAccessNotice;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Observable;
 
 
@@ -43,9 +45,13 @@ import java.util.Observable;
  * <p>
  * The code of this tools is initially based on the Instruction counter tool by Felipe Lassa.
  * <p>
- * <a href="https://www.cs.kzoo.edu/cs230/Resources/MIPS/MachineXL/mipsOpFunctCodes.html">Simple Reference</a>
+ * Some references:
+ * <ul>
+ * <li><a href="https://www.cs.kzoo.edu/cs230/Resources/MIPS/MachineXL/mipsOpFunctCodes.html">Simple Reference</a>
+ * <li><a href="https://mathcs.holycross.edu/~csci226/MIPS/SPIM.pdf">Complete Reference</a>
  * <p>
- * <a href="https://mathcs.holycross.edu/~csci226/MIPS/SPIM.pdf">Complete Reference</a>
+ * When launched in CLI mode, this tool will be injected into {@link mars.MarsLaunch}
+ * and will output the final statistics to a file named "InstructionStatistics.txt".
  *
  * @author Ingo Kofler <ingo.kofler@itec.uni-klu.ac.at>
  * @author Tony S. <tony-turmoil@outlook.com>
@@ -98,6 +104,7 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      */
     private final String[] m_categoryLabels = { "Division", "Multiply", "Jump/Branch", "Memory", "Others" };
     private final double[] m_instWeights = new double[]{ 50.0, 4.0, 1.2, 2.0, 1.0 };
+
     /**
      * The last address we saw. We ignore it because the only way for a
      * program to execute twice the same instruction is to enter an infinite
@@ -130,6 +137,13 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
     private int m_totalCounter = 0;
 
     /**
+     * final statistics cycle of the simulation
+     */
+    private double m_finalCycle = 0.0;
+
+    private boolean m_headless = true;
+
+    /**
      * Simple constructor, likely used to run a stand-alone enhanced instruction counter.
      *
      * @param title   String containing title for title bar
@@ -145,6 +159,18 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      */
     public InstructionStatistics() {
         super(InstructionStatistics.NAME + ", " + InstructionStatistics.VERSION, InstructionStatistics.HEADING);
+    }
+
+    /**
+     * Manual construction for CLI mode.
+     * @param headless boolean indicating if the tool is running in CLI mode
+     */
+    public InstructionStatistics(boolean headless) {
+        super(InstructionStatistics.NAME + ", " + InstructionStatistics.VERSION, InstructionStatistics.HEADING);
+        m_headless = headless;
+        if (m_headless) {
+            addAsObserver();
+        }
     }
 
 
@@ -305,20 +331,23 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      * updates the text fields and progress bars according to the current counter values.
      */
     protected void updateDisplay() {
-        m_tfTotalCounter.setText(String.valueOf(m_totalCounter));
+        double finalCycle = 0.0;
+        for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
+            finalCycle += m_counters[i] * m_instWeights[i];
+        }
+        m_finalCycle = finalCycle;
 
+        if (m_headless) {
+            return;
+        }
+
+        m_tfTotalCounter.setText(String.valueOf(m_totalCounter));
         for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
             m_tfCounters[i].setText(String.valueOf(m_counters[i]));
             m_pbCounters[i].setMaximum(m_totalCounter);
             m_pbCounters[i].setValue(m_counters[i]);
         }
-
-        double finalCycle = 0.0;
-        for (int i = 0; i < InstructionStatistics.MAX_CATEGORY; i++) {
-            finalCycle += m_counters[i] * m_instWeights[i];
-        }
-
-        m_tfStatistics.setText(String.format("%1$,.1f", finalCycle));
+        m_tfStatistics.setText(String.format("%1$,.1f", m_finalCycle));
     }
 
     /**
@@ -393,5 +422,21 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
         }
 
         return InstructionStatistics.CATEGORY_OTHER;
+    }
+
+    /**
+     * Outputs the final statistics of the instruction categories to a file.
+     */
+    public void dump() {
+        try {
+            FileWriter fw = new FileWriter("InstructionStatistics.txt", false);
+            for (int i = 0; i < MAX_CATEGORY; i++) {
+                fw.write(String.format("%15s: %d\n", m_categoryLabels[i], m_counters[i]));
+            }
+            fw.write(String.format("%15s: %s\n", "Final Cycle", String.format("%.1f", m_finalCycle)));
+            fw.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

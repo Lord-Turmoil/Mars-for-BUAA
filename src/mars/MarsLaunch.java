@@ -1,5 +1,6 @@
 package mars;
 
+import mars.tools.InstructionStatistics;
 import mars.venus.*;
 import mars.util.*;
 import mars.mips.dump.*;
@@ -8,9 +9,7 @@ import mars.simulator.*;
 
 import java.io.*;
 import java.util.*;
-import java.awt.*;
 import javax.swing.*;
-import javax.swing.JOptionPane;   // KENV 9/8/2004
 
 /*
 Copyright (c) 2003-2012,  Pete Sanderson and Kenneth Vollmar
@@ -156,6 +155,8 @@ public class MarsLaunch {
             code = new MIPSprogram();
             maxSteps = -1;
             out = System.out;
+
+            InstructionStatistics instructionStatistics = new InstructionStatistics(true);
             if (parseCommandArgs(args)) {
                 if (runCommand()) {
                     displayMiscellaneousPostMortem();
@@ -164,6 +165,8 @@ public class MarsLaunch {
                 }
                 dumpSegments();
             }
+            instructionStatistics.dump();
+
             System.exit(Globals.exitCode);
         }
     }
