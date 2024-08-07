@@ -103,7 +103,7 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      * names of the instruction categories as array
      */
     private final String[] m_categoryLabels = { "Division", "Multiply", "Jump/Branch", "Memory", "Others" };
-    private final double[] m_instWeights = new double[]{ 50.0, 4.0, 1.2, 2.0, 1.0 };
+    private final double[] m_instWeights = new double[]{ 25.0, 4.0, 2.0, 3.0, 1.0 };
 
     /**
      * The last address we saw. We ignore it because the only way for a
@@ -379,6 +379,9 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
             if (funct == 0x08 || funct == 0x09) {
                 return InstructionStatistics.CATEGORY_BRANCH; // jr, jalr
             }
+            if (funct == 0x0A || funct == 0x0B) {
+                return InstructionStatistics.CATEGORY_OTHER; // movz, movn
+            }
             if (funct == 0x0C || funct == 0x0D) {
                 return InstructionStatistics.CATEGORY_OTHER; // syscall, break
             }
@@ -408,8 +411,24 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
         if (0x08 <= opCode && opCode <= 0x0F) {
             return InstructionStatistics.CATEGORY_OTHER; // addi, addiu, slti, sltiu, andi, ori, xori, lui
         }
+        if (opCode == 0x11) {
+            if (funct == 0x03) {
+                return InstructionStatistics.CATEGORY_DIV; // div.s
+            }
+            if (funct == 0x02) {
+                return InstructionStatistics.CATEGORY_MUL; // mul.s
+            }
+            return InstructionStatistics.CATEGORY_OTHER;
+        }
         if (0x14 <= opCode && opCode <= 0x17) {
             return InstructionStatistics.CATEGORY_BRANCH; // beql, bnel, blezl, bgtzl
+        }
+        if (opCode == 0x1C) {
+            if ((funct == 0x00) || (funct == 0x01) || (funct == 0x02) || (funct == 0x04) || (funct == 0x05)) {
+                return InstructionStatistics.CATEGORY_MUL; // madd, maddu, mul, msub, msubu
+            } else {
+                return InstructionStatistics.CATEGORY_OTHER;
+            }
         }
         if (0x20 <= opCode && opCode <= 0x26) {
             return InstructionStatistics.CATEGORY_MEM; // lb, lh, lwl, lw, lbu, lhu, lwr
