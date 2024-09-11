@@ -36,8 +36,6 @@ import mars.util.InstructionStatisticsHelper;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Observable;
 
 
@@ -68,7 +66,7 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      * heading of the tool
      */
     private static final String HEADING = "";
-
+    private final InstructionStatisticsHelper m_helper = new InstructionStatisticsHelper();
     /**
      * The last address we saw. We ignore it because the only way for a
      * program to execute twice the same instruction is to enter an infinite
@@ -83,19 +81,17 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
      * text field for visualizing the final cycle of the simulation
      */
     private JTextField m_tfStatistics;
-    /**
-     * array of text field - one for each instruction category
-     */
-    private JTextField m_tfCounters[];
 
     // From Felipe Lessa's instruction counter.  Prevent double-counting of instructions 
     // which happens because 2 read events are generated.   
     /**
+     * array of text field - one for each instruction category
+     */
+    private JTextField m_tfCounters[];
+    /**
      * array of progress pars - one for each instruction category
      */
     private JProgressBar m_pbCounters[];
-
-    private final InstructionStatisticsHelper m_helper = new InstructionStatisticsHelper();
 
     /**
      * Simple constructor, likely used to run a stand-alone enhanced instruction counter.
@@ -116,6 +112,7 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
 
     /**
      * Manual construction for CLI mode.
+     *
      * @param headless boolean indicating if the tool is running in CLI mode
      */
     public InstructionStatistics(boolean headless) {
@@ -272,7 +269,8 @@ public class InstructionStatistics extends AbstractMarsToolAndApplication {
         m_tfTotalCounter.setText(String.valueOf(m_helper.getTotalCounter()));
         for (int i = 0; i < InstructionStatisticsHelper.MAX_CATEGORY; i++) {
             m_tfCounters[i].setText(String.valueOf(m_helper.getCounter(i)));
-            m_pbCounters[i].setMaximum(m_helper.getTotalCounter());
+            // prevent division by zero by setting the maximum value to at least 1
+            m_pbCounters[i].setMaximum(Math.max(m_helper.getTotalCounter(), 1));
             m_pbCounters[i].setValue(m_helper.getCounter(i));
         }
         m_tfStatistics.setText(String.format("%1$,.1f", m_helper.getFinalCycle()));
