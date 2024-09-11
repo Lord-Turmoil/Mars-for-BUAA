@@ -41,7 +41,7 @@ Below is the explanation for the command-line arguments, you can refer to the of
 
 ## Modifications
 
-To change the instruction statistics feature, you can modify the `mars.tools.InstructionStatistisc` class by changing the `m_instWeights` field.
+To change the instruction statistics feature, you can modify the `mars.util.InstructionStatisticsHelper` class by changing the `m_instWeights` field.
 
 In GUI mode, it won't output `InstructionStatistics.txt`. In CLI mode, this feature is injected into `mars.MarsLaunch`.
 

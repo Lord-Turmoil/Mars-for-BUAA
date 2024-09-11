@@ -38,7 +38,7 @@ public class InstructionStatisticsHelper {
      * names of the instruction categories as array
      */
     private final String[] m_categoryLabels = { "Division", "Multiply", "Jump/Branch", "Memory", "Others" };
-    private final double[] m_instWeights = new double[]{ 25.0, 4.0, 2.0, 3.0, 1.0 };
+    private final double[] m_instWeights = new double[]{ 50.0, 3.0, 3.0, 4.0, 1.0 };
 
     /**
      * counter for the total number of instructions processed
